@@ -7,6 +7,7 @@
 #include <vector>
 #include <chrono>
 #include <iomanip>
+#include <error.h>
 
 
 void sh_loop();
@@ -58,11 +59,19 @@ void sh_loop() {
 			} else {
 				chdir(cmd[1]);
 			}
-		} else if(!strcmp("ptime", cmd[0]) == 0) {
+		} else if (strcmp("cwd", cmd[0]) == 0) {
+			char cwd[4096];
+			if (getcwd(cwd, sizeof(cwd)) != NULL) {
+				std::cout << cwd << std::endl;
+			} else {
+				perror("getcwd() error");
+			}
+				
+		} else if (!strcmp("ptime", cmd[0]) == 0) {
 			child_pid = fork();
 			if(child_pid == 0) {
 				execvp(cmd[0], cmd);
-				std::cout << "Invalid input" << std::endl;
+				perror("Invalid Input");
 				exit(0);
 			} else {
 				wait(NULL);
