@@ -23,7 +23,7 @@ int main() {
 }
 
 void clean(char* cmd[]) {
-	for(int i = 0; i < 256; i++) {
+	for(int i = 0; i < 1000; i++) {
 		cmd[i] = NULL;
 	}
 }
@@ -31,8 +31,8 @@ void clean(char* cmd[]) {
 void sh_loop() {
 	bool status = true;
 	char *command = NULL;
-	char *cmd[256];
-	char input[256];
+	char *cmd[1000];
+	char input[1000];
 	pid_t child_pid;
 
 	while(status) {
@@ -51,6 +51,12 @@ void sh_loop() {
 			std::cout << "\n-- Command History --" << std::endl;
 			for(unsigned int i = 0; i < history.size(); i++) {
 				std::cout << history[i] << std::endl;
+			}
+		} else if(strcmp("cd",cmd[0]) == 0) {
+			if(strcmp("~", cmd[1]) == 0) {
+				chdir(getenv("HOME"));
+			} else {
+				chdir(cmd[1]);
 			}
 		} else if(!strcmp("ptime", cmd[0]) == 0) {
 			child_pid = fork();
