@@ -1,1 +1,0 @@
-/usr/bin/c++   -Wall -Wextra -Wno-psabi -g3 -std=c++14    CMakeFiles/Assign4.dir/src/main.cpp.o  -o Assign4 -rdynamic 
