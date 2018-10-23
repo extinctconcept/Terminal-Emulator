@@ -1,0 +1,28 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/pi/Documents/School/CS3100/Homework/HW4/src/main.cpp
+iostream
+-
+stdio.h
+-
+unistd.h
+-
+sys/wait.h
+-
+stdlib.h
+-
+string.h
+-
+vector
+-
+chrono
+-
+iomanip
+-
+

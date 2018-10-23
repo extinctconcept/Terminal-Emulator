@@ -1,0 +1,3 @@
+/home/pi/Documents/School/CS3100/Homework/HW4/build/CMakeFiles/rebuild_cache.dir
+/home/pi/Documents/School/CS3100/Homework/HW4/build/CMakeFiles/edit_cache.dir
+/home/pi/Documents/School/CS3100/Homework/HW4/build/CMakeFiles/Assign4.dir
