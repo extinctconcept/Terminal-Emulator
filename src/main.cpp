@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <string.h>
+#include <cstring>
 #include <vector>
 #include <chrono>
 #include <iomanip>
@@ -23,29 +24,48 @@ int main() {
 
 }
 
-void clean(char* cmd[]) {
-	for(int i = 0; i < 1000; i++) {
+void clean(char* cmd[], char input[256]) {
+	for(int i = 0; i < 256; i++) {
 		cmd[i] = NULL;
+		input[i] = ' ';
 	}
 }
 
 void sh_loop() {
 	bool status = true;
 	char *command = NULL;
-	char *cmd[1000];
-	char input[1000];
+	char *cmd[256];
+	char input[256];
 	pid_t child_pid;
 
 	while(status) {
-		clean(cmd);
+		clean(cmd, input);
 		getInput(command, cmd, input);
 
 		auto before = std::chrono::high_resolution_clock::now();
 
+		if (strcmp("^", cmd[0]) == 0) {
+			int val = (atoi(cmd[1]) - 1);
+			std::string str(history[val]);	
+			history.push_back(str);
+			clean(cmd, input);
+			for(unsigned int i = 0; i <= str.size(); i++) {
+				input[i] = str[i];
+			}
+			command = strtok(input, " ");
+			int i = 0;
+
+			while(command != NULL) {
+				cmd[i] = command;
+				i++;
+				command = strtok(NULL, " ");
+			}
+		}
+
 		if(strcmp("ptime", cmd[0]) == 0) {
 			double val = timeArray[counter - 1];
 			std::cout << "\nTime spent executing child processes: " << std::fixed << std::setprecision(4)  << val  << " seconds." << std::endl;
-			clean(cmd);
+			clean(cmd, input);
 		} else if (strcmp("exit", cmd[0]) == 0) {
 			exit(0);
 		} else if (strcmp("history",cmd[0]) == 0) {
@@ -66,7 +86,6 @@ void sh_loop() {
 			} else {
 				perror("getcwd() error");
 			}
-				
 		} else if (!strcmp("ptime", cmd[0]) == 0) {
 			child_pid = fork();
 			if(child_pid == 0) {
