@@ -60,6 +60,14 @@ void sh_loop() {
 				i++;
 				command = strtok(NULL, " ");
 			}
+		
+			if(strcmp("cd", cmd[0]) == 0 && i == 1) {
+			std::cout << "Error: The cd command must have parameters I.E. cd ../..\n" 
+				  << "if you are trying to access the HOME directory use cd ~ \n";
+			clean(cmd, input);
+			getInput(command, cmd, input);
+	}
+
 		}
 
 		if(strcmp("ptime", cmd[0]) == 0) {
@@ -74,10 +82,14 @@ void sh_loop() {
 				std::cout << history[i] << std::endl;
 			}
 		} else if(strcmp("cd",cmd[0]) == 0) {
-			if(strcmp("~", cmd[1]) == 0) {
-				chdir(getenv("HOME"));
-			} else {
-				chdir(cmd[1]);
+			try {
+				if(strcmp("~", cmd[1]) == 0) {
+					chdir(getenv("HOME"));
+				} else {
+					chdir(cmd[1]);
+				}
+			} catch (...) {
+				std::cerr << "Exception Caught : note \"cd\" alone is not valid to access the home directory use \"cd ~\""  << std::endl;
 			}
 		} else if (strcmp("cwd", cmd[0]) == 0) {
 			char cwd[4096];
@@ -109,14 +121,27 @@ void sh_loop() {
 void getInput(char* command, char* cmd[], char input[]) {
 	std::cout << "[cmd]:  ";
 	std::cin.getline(input,256);
-	std::string str(input);	
-	history.push_back(str);
-	command = strtok(input, " ");
-	int i = 0;
+	std::string str(input);
+	if(str.find_first_not_of(' ') != std::string::npos) {
+		history.push_back(str);
+		command = strtok(input, " ");
+		int i = 0;
+		
 
-	while(command != NULL) {
-		cmd[i] = command;
-		i++;
-		command = strtok(NULL, " ");
+		while(command != NULL) {
+			cmd[i] = command;
+			i++;
+			command = strtok(NULL, " ");
+		}
+		if(strcmp("cd", cmd[0]) == 0 && i == 1) {
+			std::cout << "Error: The cd command must have parameters I.E. cd ../..\n" 
+				  << "if you are trying to access the HOME directory use cd ~ \n";
+			clean(cmd, input);
+			getInput(command, cmd, input);
+		}
+	} else {
+		std::cout << "input cannot be NULL" << std::endl;
+		clean(cmd, input);
+		getInput(command, cmd, input);
 	}
 }
