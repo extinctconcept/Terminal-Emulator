@@ -1,8 +1,7 @@
 #include <iostream>
-#include <stdio.h>
 #include <unistd.h>
+#include <signal.h>
 #include <sys/wait.h>
-#include <stdlib.h>
 #include <string.h>
 #include <cstring>
 #include <vector>
@@ -14,9 +13,17 @@
 void sh_loop();
 void getInput(char* command, char* cmd[], char input[]);
 void getptime(std::vector<double> timeArray, int counter);
+int main();
 std::vector<std::string> history;
 std::vector<double> timeArray;
 unsigned int counter = 0;
+bool status = true;
+
+void sigintHandler(int sig_num __attribute__((unused))) {
+	signal(SIGINT, sigintHandler);
+	status = false;
+	main();
+} 
 
 int main() {
 	sh_loop();
@@ -32,13 +39,13 @@ void clean(char* cmd[], char input[256]) {
 }
 
 void sh_loop() {
-	bool status = true;
 	char *command = NULL;
 	char *cmd[256];
 	char input[256];
 	pid_t child_pid;
 
 	while(status) {
+		signal(SIGINT, sigintHandler);
 		clean(cmd, input);
 		getInput(command, cmd, input);
 
@@ -49,6 +56,7 @@ void sh_loop() {
 			std::string str(history[val]);	
 			history.push_back(str);
 			clean(cmd, input);
+
 			for(unsigned int i = 0; i <= str.size(); i++) {
 				input[i] = str[i];
 			}
@@ -62,11 +70,11 @@ void sh_loop() {
 			}
 		
 			if(strcmp("cd", cmd[0]) == 0 && i == 1) {
-			std::cout << "Error: The cd command must have parameters I.E. cd ../..\n" 
-				  << "if you are trying to access the HOME directory use cd ~ \n";
-			clean(cmd, input);
-			getInput(command, cmd, input);
-	}
+				std::cout << "Error: The cd command must have parameters I.E. cd ../..\n" 
+					  << "if you are trying to access the HOME directory use cd ~ \n";
+				clean(cmd, input);
+				getInput(command, cmd, input);
+			}
 
 		}
 
@@ -99,6 +107,31 @@ void sh_loop() {
 				perror("getcwd() error");
 			}
 		} else if (!strcmp("ptime", cmd[0]) == 0) {
+
+			const int READ = 0;
+			const int WRITE = 1;
+			// creates pipe
+			int p[2];
+			if(pipe(p) != 0) {
+				std::cerr << strerror(errno) << std::endl;
+			}
+
+			int i = 0;
+			// split commands if pipe char exists
+			while(cmd[i] != '\0') {
+				if(strcmp("|", cmd[i]) == 0) {
+					//for(int j = i+1; cmd[j] != '\0'; j++) {
+					//	std::cout << cmd[j];
+					//}
+					std::cout << cmd[i] << std::endl;
+					i++;
+				}
+				i++;
+			}	
+		
+
+				
+			
 			child_pid = fork();
 			if(child_pid == 0) {
 				execvp(cmd[0], cmd);
@@ -107,19 +140,32 @@ void sh_loop() {
 			} else {
 				wait(NULL);
 			}
-			
 
+
+		close(p[READ]);
+		close(p[WRITE]);
 		}
+
+
 		
 		counter++;
 		auto after = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<float> dur = after - before;
 		timeArray.push_back(dur.count());
 	}
+
+	if(!status) {
+		status = true;
+		std::cout << '\n';
+		sh_loop();
+	}
+
+
 }
 
 void getInput(char* command, char* cmd[], char input[]) {
-	std::cout << "[cmd]:  ";
+	char cwd[4096];
+	std::cout <<  getcwd(cwd, sizeof(cwd))<< " $  ";
 	std::cin.getline(input,256);
 	std::string str(input);
 	if(str.find_first_not_of(' ') != std::string::npos) {
@@ -145,3 +191,4 @@ void getInput(char* command, char* cmd[], char input[]) {
 		getInput(command, cmd, input);
 	}
 }
+
