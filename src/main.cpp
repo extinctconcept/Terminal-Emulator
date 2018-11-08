@@ -107,45 +107,57 @@ void sh_loop() {
 				perror("getcwd() error");
 			}
 		} else if (!strcmp("ptime", cmd[0]) == 0) {
-
 			const int READ = 0;
 			const int WRITE = 1;
-			// creates pipe
+			char *tmp[256];
+			int val = 0;
+			int wstatus;
 			int p[2];
 			if(pipe(p) != 0) {
 				std::cerr << strerror(errno) << std::endl;
 			}
 
-			int i = 0;
-			// split commands if pipe char exists
-			while(cmd[i] != '\0') {
-				if(strcmp("|", cmd[i]) == 0) {
-					//for(int j = i+1; cmd[j] != '\0'; j++) {
-					//	std::cout << cmd[j];
-					//}
-					std::cout << cmd[i] << std::endl;
-					i++;
+			for(int i = 0; cmd[i] != '\0'; i++) {
+				if(strcmp("|", cmd[i]) != 0) {
+					tmp[i] = cmd[i];
+				} else {
+					break;
 				}
-				i++;
-			}	
-		
-
-				
-			
-			child_pid = fork();
-			if(child_pid == 0) {
-				execvp(cmd[0], cmd);
-				perror("Invalid Input");
-				exit(0);
-			} else {
-				wait(NULL);
 			}
 
+			pid_t child = fork();
+			if(child == 0) {
+				close(p[READ]);
+				dup2(p[WRITE], STDOUT_FILENO);
+				execvp(tmp[0], tmp);
+			} 
 
-		close(p[READ]);
-		close(p[WRITE]);
+
+			// split commands if pipe char exists
+			while(cmd[val] != '\0') {
+				if(strcmp("|", cmd[val]) == 0) {
+					char *tmp[256];
+					int curr = 0;
+					for(int j = val + 1; cmd[j] != '\0' && (strcmp("|", cmd[j]) != 0); j++) {
+						tmp[val] = cmd[j];
+						curr++;
+					}
+
+					pid_t inside = fork();	
+					if(inside == 0) {
+						dup2(p[READ], STDIN_FILENO);
+						execvp(tmp[0], tmp);
+					}
+
+					val++;
+				}
+				val++;
+			}
+
+			wait(NULL);
+			close(p[READ]);
+			close(p[WRITE]);
 		}
-
 
 		
 		counter++;
