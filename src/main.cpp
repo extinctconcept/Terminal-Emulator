@@ -111,7 +111,7 @@ void sh_loop() {
 			const int WRITE = 1;
 			char *tmp[256];
 			int val = 0;
-			int wstatus;
+			int numcmds = 0;
 			int p[2];
 			if(pipe(p) != 0) {
 				std::cerr << strerror(errno) << std::endl;
@@ -124,15 +124,16 @@ void sh_loop() {
 					break;
 				}
 			}
-
-			pid_t child = fork();
-			if(child == 0) {
+			numcmds++;
+			child_pid = fork();
+			if(child_pid == 0) {
 				close(p[READ]);
 				dup2(p[WRITE], STDOUT_FILENO);
 				execvp(tmp[0], tmp);
-			} 
-
-
+			}else {
+				wait(NULL);
+			}	
+			
 			// split commands if pipe char exists
 			while(cmd[val] != '\0') {
 				if(strcmp("|", cmd[val]) == 0) {
@@ -142,21 +143,25 @@ void sh_loop() {
 						tmp[val] = cmd[j];
 						curr++;
 					}
-
+					numcmds++;
 					pid_t inside = fork();	
 					if(inside == 0) {
 						dup2(p[READ], STDIN_FILENO);
+						dup2(p[WRITE], STDOUT_FILENO);
 						execvp(tmp[0], tmp);
-					}
-
+					}	
 					val++;
 				}
 				val++;
 			}
 
-			wait(NULL);
 			close(p[READ]);
 			close(p[WRITE]);
+
+			while(numcmds > 0) {
+				numcmds--;
+				wait(NULL);
+			}
 		}
 
 		
