@@ -13,7 +13,7 @@
 void sh_loop();
 void getInput(char* command, char* cmd[], char input[]);
 void getptime(std::vector<double> timeArray, int counter);
-void piping(char *temp[], char *cmd[],int count);
+void piping(char *temp[], char *cmd[]);
 int main();
 std::vector<std::string> history;
 std::vector<double> timeArray;
@@ -110,7 +110,7 @@ void sh_loop() {
 		} else if (!strcmp("ptime", cmd[0]) == 0) {
 			char *temp[256];
 			int val = 0;
-			int pipecount = 0;
+			bool hasPipe = false;
 
 			while(cmd[val] != '\0') {
 				if(strcmp("|", cmd[val]) == 0) {
@@ -120,17 +120,13 @@ void sh_loop() {
 						temp[x] = cmd[j];
 						x++;
 					}
-					pipecount++;
 					val++;
 				}
 				val++;
 			}
 
-			if(temp[0] != NULL) {
-				piping(temp, cmd, pipecount);
-			}
 
-			if(cmd.find("|") == 0) {
+			if(hasPipe == false) {
 				child_pid = fork();
 				if(child_pid == 0) {
 					execvp(cmd[0], cmd);
@@ -139,6 +135,11 @@ void sh_loop() {
 				} else {
 					wait(NULL);	
 				}
+			}
+			
+			if(hasPipe == true) {
+				piping(temp, cmd);
+				hasPipe = false;
 			}
 
 		}
@@ -158,17 +159,23 @@ void sh_loop() {
 
 }
 
-void piping(char *temp[], char *cmd[], int count) {
+void piping(char *temp[], char *cmd[]) {
 	const int READ = 0;
 	const int WRITE = 1;
 	char *tmp[256];
-	
+
+	// split up the commands on pipe char	
 	for(int i = 0; cmd[i] != '\0'; i++) {
 		if(strcmp("|", cmd[i]) != 0) {
 			tmp[i] = cmd[i];
+		} else {
+			break;
 		}
 	}
+
+
 	
+	// open pipe
 	int p[2];
 	if(pipe(p) != 0) {
 		std::cerr << strerror(errno) << std::endl;
