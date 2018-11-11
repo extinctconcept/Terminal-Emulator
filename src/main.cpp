@@ -13,6 +13,7 @@
 void sh_loop();
 void getInput(char* command, char* cmd[], char input[]);
 void getptime(std::vector<double> timeArray, int counter);
+void piping(char *temp[], char *cmd[],int count);
 int main();
 std::vector<std::string> history;
 std::vector<double> timeArray;
@@ -107,64 +108,41 @@ void sh_loop() {
 				perror("getcwd() error");
 			}
 		} else if (!strcmp("ptime", cmd[0]) == 0) {
-			const int READ = 0;
-			const int WRITE = 1;
-			char *tmp[256];
+			char *temp[256];
 			int val = 0;
-			int numcmds = 0;
-			int p[2];
-			if(pipe(p) != 0) {
-				std::cerr << strerror(errno) << std::endl;
-			}
+			int pipecount = 0;
 
-			for(int i = 0; cmd[i] != '\0'; i++) {
-				if(strcmp("|", cmd[i]) != 0) {
-					tmp[i] = cmd[i];
-				} else {
-					break;
-				}
-			}
-			numcmds++;
-			child_pid = fork();
-			if(child_pid == 0) {
-				close(p[READ]);
-				dup2(p[WRITE], STDOUT_FILENO);
-				execvp(tmp[0], tmp);
-			}else {
-				wait(NULL);
-			}	
-			
-			// split commands if pipe char exists
 			while(cmd[val] != '\0') {
 				if(strcmp("|", cmd[val]) == 0) {
-					char *tmp[256];
-					int curr = 0;
+					hasPipe = true;
+					int x = 0;
 					for(int j = val + 1; cmd[j] != '\0' && (strcmp("|", cmd[j]) != 0); j++) {
-						tmp[val] = cmd[j];
-						curr++;
+						temp[x] = cmd[j];
+						x++;
 					}
-					numcmds++;
-					pid_t inside = fork();	
-					if(inside == 0) {
-						dup2(p[READ], STDIN_FILENO);
-						dup2(p[WRITE], STDOUT_FILENO);
-						execvp(tmp[0], tmp);
-					}	
+					pipecount++;
 					val++;
 				}
 				val++;
 			}
 
-			close(p[READ]);
-			close(p[WRITE]);
-
-			while(numcmds > 0) {
-				numcmds--;
-				wait(NULL);
+			if(temp[0] != NULL) {
+				piping(temp, cmd, pipecount);
 			}
+
+			if(cmd.find("|") == 0) {
+				child_pid = fork();
+				if(child_pid == 0) {
+					execvp(cmd[0], cmd);
+					perror("Invalid Input");
+					exit(0);
+				} else {
+					wait(NULL);	
+				}
+			}
+
 		}
 
-		
 		counter++;
 		auto after = std::chrono::high_resolution_clock::now();
 		std::chrono::duration<float> dur = after - before;
@@ -178,6 +156,49 @@ void sh_loop() {
 	}
 
 
+}
+
+void piping(char *temp[], char *cmd[], int count) {
+	const int READ = 0;
+	const int WRITE = 1;
+	char *tmp[256];
+	
+	for(int i = 0; cmd[i] != '\0'; i++) {
+		if(strcmp("|", cmd[i]) != 0) {
+			tmp[i] = cmd[i];
+		}
+	}
+	
+	int p[2];
+	if(pipe(p) != 0) {
+		std::cerr << strerror(errno) << std::endl;
+		return;
+	}	
+	
+	pid_t command = fork();
+	if(command == 0) {
+		close(p[READ]);
+		dup2(p[WRITE], STDOUT_FILENO);
+		execvp(tmp[0], tmp);
+		std::cerr << strerror(errno) << std::endl;
+		return;
+	}
+	
+	pid_t pipcmd = fork();
+	if(pipcmd == 0) {
+		close(p[WRITE]);
+		dup2(p[READ], STDIN_FILENO);
+		execvp(temp[0], temp);
+		std::cerr << strerror(errno) << std::endl;
+		return;
+	}
+
+	close(p[READ]);
+	close(p[WRITE]);
+	
+	wait(NULL);
+	wait(NULL);
+	return;	
 }
 
 void getInput(char* command, char* cmd[], char input[]) {
